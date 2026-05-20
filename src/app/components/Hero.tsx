@@ -15,9 +15,6 @@ export function Hero() {
   const scale  = useTransform(scrollYProgress, [0, 0.5], [1, 0.8]);
   const y      = useTransform(scrollYProgress, [0, 1], [0, 200]);
 
-  const gridColor = isDark
-    ? 'rgba(255,255,255,0.06)'
-    : 'rgba(0,0,0,0.05)';
 
   return (
     <section
@@ -38,15 +35,6 @@ export function Hero() {
               radial-gradient(circle at 40% 20%, rgba(59,130,246,0.2) 0%, transparent 50%)
             `,
             backgroundSize: '100% 100%',
-          }}
-        />
-
-        {/* Grid */}
-        <div
-          className="absolute inset-0"
-          style={{
-            backgroundImage: `linear-gradient(to right, ${gridColor} 1px, transparent 1px), linear-gradient(to bottom, ${gridColor} 1px, transparent 1px)`,
-            backgroundSize: '80px 80px',
           }}
         />
 
