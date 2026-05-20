@@ -1,26 +1,10 @@
-/**
- * AdminPage  PIN-protected product management panel.
- *
- * After authenticating with ADMIN_PIN (adminConfig.ts),
- * an editor can:
- *    Override name / tagline / icon / gradient / hub position / links
- *     for any of the six base products
- *    Add brand-new products (action-cards demo type)
- *    Delete any product
- *
- * All changes are saved to both localStorage and MongoDB via
- * the productStore's saveAdminStorage helper.
- */
-
-import { useState } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import {
-  Lock, Plus, Trash2, Edit2, Save, X, ChevronLeft,
-  Eye, EyeOff,
+  Globe, ArrowLeft, Plus, Pencil, Trash2, RotateCcw,
+  Eye, EyeOff, X, Check, Save, User, Lock,
 } from 'lucide-react';
-
 import {
-  ADMIN_PIN,
   COLOR_OPTIONS,
   ICON_NAMES,
   ICON_REGISTRY,
@@ -31,17 +15,30 @@ import {
 import { PRODUCTS } from '../config/products';
 import { useProducts } from '../store/productStore';
 
-//  Helpers 
+/* ---------------------------------------------------------- */
+/* Auth                                                        */
+/* ---------------------------------------------------------- */
+const ADMIN_USER = 'admin';
+const ADMIN_PASS = '1234';
 
-const DEFAULT_NEW_PRODUCT: Omit<SerializedProduct, 'id'> = {
+type LinkKey = 'learnMore' | 'requestDemo' | 'documentation';
+const LINK_LABELS: Record<LinkKey, string> = {
+  learnMore: 'Learn More',
+  requestDemo: 'Request Demo',
+  documentation: 'Documentation',
+};
+
+function genId() { return 'prod_' + Math.random().toString(36).slice(2, 10); }
+
+const DEFAULT_NEW: Omit<SerializedProduct, 'id'> = {
   name: 'New Product',
   tagline: 'A powerful AI product',
   iconName: 'Brain',
   gradient: 'from-blue-500 to-cyan-500',
   accent: 'blue',
   bgTint: 'via-blue-950/10',
-  hubPositionX: 0,
-  hubPositionY: 0,
+  hubPositionX: 150,
+  hubPositionY: -80,
   links: {},
   agentStatus: 'Ready',
   demoActions: [],
@@ -51,420 +48,706 @@ const DEFAULT_NEW_PRODUCT: Omit<SerializedProduct, 'id'> = {
   demoFeatures: [],
 };
 
-//  Sub-components 
+/* ---------------------------------------------------------- */
+/* Login screen                                               */
+/* ---------------------------------------------------------- */
+function LoginScreen({ onLogin }: { onLogin: () => void }) {
+  const [user, setUser]   = useState('');
+  const [pass, setPass]   = useState('');
+  const [showP, setShowP] = useState(false);
+  const [error, setError] = useState('');
 
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
+  const submit = () => {
+    if (user === ADMIN_USER && pass === ADMIN_PASS) {
+      onLogin();
+    } else {
+      setError('Invalid credentials');
+      setTimeout(() => setError(''), 2000);
+    }
+  };
+
   return (
-    <div>
-      <label className="block text-xs text-white/50 mb-1">{label}</label>
-      {children}
+    <div className="min-h-screen bg-[#0a0b0f] flex items-center justify-center px-4">
+      <motion.div
+        initial={{ opacity: 0, scale: 0.92 }}
+        animate={{ opacity: 1, scale: 1 }}
+        className="bg-[#13141a] border border-white/10 rounded-2xl p-10 w-full max-w-sm"
+      >
+        <div className="w-14 h-14 bg-gradient-to-br from-blue-500 to-purple-600 rounded-2xl flex items-center justify-center mx-auto mb-6">
+          <Globe className="w-7 h-7 text-white" />
+        </div>
+        <h1 className="text-xl font-bold text-white text-center mb-1">Trinamix Admin</h1>
+        <p className="text-sm text-white/40 text-center mb-8">Sign in to manage your products</p>
+
+        <div className="space-y-3">
+          <div className="relative">
+            <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/30" />
+            <input
+              type="text"
+              value={user}
+              onChange={(e) => setUser(e.target.value)}
+              placeholder="Username"
+              className="w-full bg-white/5 border border-white/10 rounded-xl pl-10 pr-4 py-3 text-sm text-white outline-none focus:border-white/30 transition-colors"
+            />
+          </div>
+          <div className="relative">
+            <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/30" />
+            <input
+              type={showP ? 'text' : 'password'}
+              value={pass}
+              onChange={(e) => setPass(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && submit()}
+              placeholder="Password"
+              className="w-full bg-white/5 border border-white/10 rounded-xl pl-10 pr-10 py-3 text-sm text-white outline-none focus:border-white/30 transition-colors"
+            />
+            <button
+              onClick={() => setShowP(!showP)}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-white/30 hover:text-white/60"
+            >
+              {showP ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+            </button>
+          </div>
+        </div>
+
+        {error && (
+          <p className="text-red-400 text-sm text-center mt-3">{error}</p>
+        )}
+
+        <button
+          onClick={submit}
+          className="w-full mt-5 py-3 bg-gradient-to-r from-blue-500 to-purple-600 rounded-xl text-white font-medium hover:opacity-90 transition-opacity"
+        >
+          Sign in
+        </button>
+      </motion.div>
     </div>
   );
 }
 
-function TextInput({ value, onChange, placeholder = '' }: {
-  value: string; onChange: (v: string) => void; placeholder?: string;
+/* ---------------------------------------------------------- */
+/* Hub position canvas                                        */
+/* ---------------------------------------------------------- */
+function HubCanvas({
+  x, y, iconName, gradient,
+  onChange,
+}: {
+  x: number; y: number; iconName: string; gradient: string;
+  onChange: (x: number, y: number) => void;
 }) {
+  const canvasRef = useRef<SVGSVGElement>(null);
+  const dragging  = useRef(false);
+
+  const W = 620, H = 260;
+  const cx = W / 2, cy = H / 2 + 20;
+  const scale = 0.45;
+
+  const nx = cx + x * scale;
+  const ny = cy - y * scale;
+
+  const IconComp = ICON_REGISTRY[iconName] ?? ICON_REGISTRY['Brain'];
+
+  const toCoords = (clientX: number, clientY: number) => {
+    if (!canvasRef.current) return;
+    const rect = canvasRef.current.getBoundingClientRect();
+    const svgX = ((clientX - rect.left) / rect.width) * W;
+    const svgY = ((clientY - rect.top) / rect.height) * H;
+    const newX = Math.round((svgX - cx) / scale);
+    const newY = Math.round((cy - svgY) / scale);
+    onChange(newX, newY);
+  };
+
   return (
-    <input
-      value={value}
-      onChange={(e) => onChange(e.target.value)}
-      placeholder={placeholder}
-      className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm outline-none focus:border-white/30 transition-colors"
-    />
+    <div className="rounded-xl overflow-hidden border border-white/10 bg-[#0d0e14] select-none">
+      <svg
+        ref={canvasRef}
+        viewBox={`0 0 ${W} ${H}`}
+        className="w-full"
+        style={{ height: 200 }}
+        onMouseDown={() => { dragging.current = true; }}
+        onMouseMove={(e) => { if (dragging.current) toCoords(e.clientX, e.clientY); }}
+        onMouseUp={() => { dragging.current = false; }}
+        onMouseLeave={() => { dragging.current = false; }}
+        onTouchStart={(e) => { dragging.current = true; toCoords(e.touches[0].clientX, e.touches[0].clientY); }}
+        onTouchMove={(e) => { if (dragging.current) toCoords(e.touches[0].clientX, e.touches[0].clientY); }}
+        onTouchEnd={() => { dragging.current = false; }}
+      >
+        {/* Grid */}
+        <defs>
+          <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
+            <path d="M 40 0 L 0 0 0 40" fill="none" stroke="rgba(255,255,255,0.04)" strokeWidth="1" />
+          </pattern>
+        </defs>
+        <rect width={W} height={H} fill="url(#grid)" />
+        {/* Axes */}
+        <line x1={cx} y1={0} x2={cx} y2={H} stroke="rgba(255,255,255,0.08)" strokeWidth="1" />
+        <line x1={0} y1={cy} x2={W} y2={cy} stroke="rgba(255,255,255,0.08)" strokeWidth="1" />
+        {/* Line hub -> node */}
+        <line x1={cx} y1={cy} x2={nx} y2={ny} stroke="rgba(99,102,241,0.5)" strokeWidth="1.5" strokeDasharray="4 3" />
+        {/* Hub node */}
+        <circle cx={cx} cy={cy} r={22} fill="#4c1d95" />
+        <text x={cx} y={cy + 5} textAnchor="middle" fill="white" fontSize="11" fontWeight="600">Hub</text>
+        {/* Product node */}
+        <circle cx={nx} cy={ny} r={18} fill="rgba(99,102,241,0.2)" stroke="rgba(99,102,241,0.6)" strokeWidth="1.5" style={{ cursor: 'grab' }} />
+        <text x={nx + 28} y={ny - 8} fill="rgba(255,255,255,0.5)" fontSize="10">{x},{y}</text>
+      </svg>
+      <div className="flex gap-4 px-4 py-2 border-t border-white/5">
+        <label className="text-xs text-white/40 flex items-center gap-2">
+          X
+          <input
+            type="number"
+            value={x}
+            onChange={(e) => onChange(Number(e.target.value), y)}
+            className="w-20 bg-white/5 border border-white/10 rounded-lg px-2 py-1 text-xs text-white outline-none"
+          />
+        </label>
+        <label className="text-xs text-white/40 flex items-center gap-2">
+          Y
+          <input
+            type="number"
+            value={y}
+            onChange={(e) => onChange(x, Number(e.target.value))}
+            className="w-20 bg-white/5 border border-white/10 rounded-lg px-2 py-1 text-xs text-white outline-none"
+          />
+        </label>
+      </div>
+    </div>
   );
 }
 
-//  Product edit form 
+/* ---------------------------------------------------------- */
+/* Edit / Add modal                                           */
+/* ---------------------------------------------------------- */
+type ModalTab = 'basic' | 'links' | 'demo';
 
-interface EditFormProps {
-  initial: SerializedProduct;
-  onSave: (p: SerializedProduct) => void;
-  onCancel: () => void;
-}
+function ProductModal({
+  initial, title, onSave, onClose,
+}: {
+  initial: SerializedProduct; title: string;
+  onSave: (p: SerializedProduct) => void; onClose: () => void;
+}) {
+  const [form, setForm] = useState<SerializedProduct>(initial);
+  const [tab, setTab]   = useState<ModalTab>('basic');
 
-function EditForm({ initial, onSave, onCancel }: EditFormProps) {
-  const [form, setForm] = useState<SerializedProduct>({ ...initial });
-  const set = <K extends keyof SerializedProduct>(key: K, value: SerializedProduct[K]) =>
-    setForm((prev) => ({ ...prev, [key]: value }));
+  const set = useCallback(<K extends keyof SerializedProduct>(k: K, v: SerializedProduct[K]) => {
+    setForm((f) => ({ ...f, [k]: v }));
+  }, []);
 
-  const Icon = ICON_REGISTRY[form.iconName] ?? ICON_REGISTRY['Brain'];
+  const toggleLink = (key: LinkKey) => {
+    const cur = { ...(form.links ?? {}) };
+    if (cur[key]) { delete cur[key]; } else { cur[key] = '#'; }
+    set('links', cur);
+  };
+
+  const IconComp  = ICON_REGISTRY[form.iconName] ?? ICON_REGISTRY['Brain'];
+  const colorOpt  = COLOR_OPTIONS.find((c) => c.gradient === form.gradient);
+
+  const TABS: { id: ModalTab; label: string }[] = [
+    { id: 'basic', label: 'Basic Info'    },
+    { id: 'links', label: 'Links'         },
+    { id: 'demo',  label: 'Demo Content'  },
+  ];
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: 20 }}
-      className="bg-white/5 border border-white/10 rounded-3xl p-6 space-y-5"
-    >
-      {/* Preview badge */}
-      <div className="flex items-center gap-3">
-        <div className={`w-12 h-12 bg-gradient-to-br ${form.gradient} rounded-2xl flex items-center justify-center`}>
-          <Icon className="w-6 h-6 text-white" />
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
+      <motion.div
+        initial={{ opacity: 0, scale: 0.96 }}
+        animate={{ opacity: 1, scale: 1 }}
+        exit={{ opacity: 0, scale: 0.96 }}
+        className="bg-[#13141a] border border-white/10 rounded-2xl w-full max-w-2xl max-h-[92vh] flex flex-col"
+      >
+        {/* Header */}
+        <div className="flex items-center justify-between px-6 py-4 border-b border-white/10 flex-shrink-0">
+          <h2 className="text-white font-semibold">{title}</h2>
+          <button onClick={onClose} className="text-white/30 hover:text-white transition-colors">
+            <X className="w-5 h-5" />
+          </button>
         </div>
-        <div>
-          <p className="font-semibold">{form.name || 'Untitled'}</p>
-          <p className="text-xs text-white/50">{form.tagline}</p>
+
+        {/* Tabs */}
+        <div className="flex gap-1 px-6 pt-4 flex-shrink-0">
+          {TABS.map((t) => (
+            <button
+              key={t.id}
+              onClick={() => setTab(t.id)}
+              className={`px-4 py-2 rounded-xl text-sm font-medium transition-colors ${
+                tab === t.id
+                  ? 'bg-blue-600 text-white'
+                  : 'text-white/40 hover:text-white hover:bg-white/5'
+              }`}
+            >
+              {t.label}
+            </button>
+          ))}
         </div>
-      </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <Field label="Product Name">
-          <TextInput value={form.name} onChange={(v) => set('name', v)} />
-        </Field>
-        <Field label="Tagline">
-          <TextInput value={form.tagline} onChange={(v) => set('tagline', v)} />
-        </Field>
+        {/* Body */}
+        <div className="flex-1 overflow-y-auto px-6 py-5 space-y-5">
 
-        <Field label="Icon">
-          <select value={form.iconName} onChange={(e) => set('iconName', e.target.value)}
-            className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm outline-none focus:border-white/30">
-            {ICON_NAMES.map((n) => <option key={n} value={n}>{n}</option>)}
-          </select>
-        </Field>
+          {/* ---- BASIC INFO ---- */}
+          {tab === 'basic' && (
+            <>
+              {/* Preview */}
+              <div className="flex items-center gap-4 p-4 bg-white/3 rounded-xl border border-white/8">
+                <div className={`w-14 h-14 rounded-2xl bg-gradient-to-br ${form.gradient} flex items-center justify-center flex-shrink-0`}>
+                  <IconComp className="w-7 h-7 text-white" />
+                </div>
+                <div>
+                  <p className="text-white font-medium">{form.name}</p>
+                  <p className="text-white/40 text-sm">{form.tagline}</p>
+                </div>
+              </div>
 
-        <Field label="Color Theme">
-          <select value={form.gradient} onChange={(e) => {
-            const opt = COLOR_OPTIONS.find((c) => c.gradient === e.target.value);
-            if (opt) { set('gradient', opt.gradient); set('accent', opt.accent); set('bgTint', opt.bgTint); }
-          }} className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm outline-none focus:border-white/30">
-            {COLOR_OPTIONS.map((c) => <option key={c.id} value={c.gradient}>{c.label}</option>)}
-          </select>
-        </Field>
+              {/* Name */}
+              <div>
+                <label className="block text-sm text-white/60 mb-1.5">
+                  Product name <span className="text-red-400">*</span>
+                </label>
+                <input
+                  value={form.name}
+                  onChange={(e) => set('name', e.target.value)}
+                  className="w-full bg-[#1a1b23] border border-white/10 rounded-xl px-4 py-3 text-sm text-white outline-none focus:border-blue-500/50 transition-colors"
+                />
+              </div>
 
-        <Field label="Hub X offset (px)">
-          <input type="number" value={form.hubPositionX}
-            onChange={(e) => set('hubPositionX', Number(e.target.value))}
-            className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm outline-none focus:border-white/30" />
-        </Field>
-        <Field label="Hub Y offset (px)">
-          <input type="number" value={form.hubPositionY}
-            onChange={(e) => set('hubPositionY', Number(e.target.value))}
-            className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm outline-none focus:border-white/30" />
-        </Field>
-      </div>
+              {/* Tagline */}
+              <div>
+                <label className="block text-sm text-white/60 mb-1.5">
+                  Tagline <span className="text-red-400">*</span>
+                </label>
+                <input
+                  value={form.tagline}
+                  onChange={(e) => set('tagline', e.target.value)}
+                  className="w-full bg-[#1a1b23] border border-white/10 rounded-xl px-4 py-3 text-sm text-white outline-none focus:border-blue-500/50 transition-colors"
+                />
+              </div>
 
-      <div className="space-y-3">
-        <p className="text-xs font-semibold text-white/60 uppercase tracking-wider">Links</p>
-        <Field label="Learn More URL">
-          <TextInput value={form.links.learnMore ?? ''} onChange={(v) => set('links', { ...form.links, learnMore: v })} placeholder="https://" />
-        </Field>
-        <Field label="Request Demo URL">
-          <TextInput value={form.links.requestDemo ?? ''} onChange={(v) => set('links', { ...form.links, requestDemo: v })} placeholder="https://" />
-        </Field>
-        <Field label="Documentation URL">
-          <TextInput value={form.links.documentation ?? ''} onChange={(v) => set('links', { ...form.links, documentation: v })} placeholder="https://" />
-        </Field>
-      </div>
+              {/* Icon picker */}
+              <div>
+                <label className="block text-sm text-white/60 mb-2">Icon</label>
+                <div className="grid grid-cols-8 gap-2">
+                  {ICON_NAMES.map((name) => {
+                    const Ic = ICON_REGISTRY[name];
+                    const sel = form.iconName === name;
+                    return (
+                      <button
+                        key={name}
+                        onClick={() => set('iconName', name)}
+                        title={name}
+                        className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all ${
+                          sel
+                            ? 'bg-blue-600 text-white ring-2 ring-blue-400'
+                            : 'bg-white/5 text-white/40 hover:bg-white/10 hover:text-white border border-white/8'
+                        }`}
+                      >
+                        <Ic className="w-4 h-4" />
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
 
-      <div className="flex gap-3 justify-end pt-2">
-        <button onClick={onCancel}
-          className="flex items-center gap-2 px-5 py-2.5 bg-white/5 border border-white/10 rounded-xl text-sm hover:bg-white/10 transition-colors">
-          <X className="w-4 h-4" /> Cancel
-        </button>
-        <button onClick={() => onSave(form)}
-          className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-blue-500 to-purple-600 rounded-xl text-sm font-medium hover:opacity-90 transition-opacity">
-          <Save className="w-4 h-4" /> Save Changes
-        </button>
-      </div>
-    </motion.div>
+              {/* Color scheme */}
+              <div>
+                <label className="block text-sm text-white/60 mb-2">Color scheme</label>
+                <div className="grid grid-cols-5 gap-2">
+                  {COLOR_OPTIONS.map((c) => {
+                    const sel = form.gradient === c.gradient;
+                    return (
+                      <button
+                        key={c.id}
+                        onClick={() => { set('gradient', c.gradient); set('accent', c.accent); set('bgTint', c.bgTint); }}
+                        className={`h-12 rounded-xl relative transition-all ${
+                          sel ? 'ring-2 ring-white ring-offset-2 ring-offset-[#13141a]' : 'hover:scale-105'
+                        }`}
+                        style={{ background: c.preview }}
+                        title={c.label}
+                      >
+                        {sel && <Check className="absolute inset-0 m-auto w-4 h-4 text-white drop-shadow" />}
+                      </button>
+                    );
+                  })}
+                </div>
+                {colorOpt && (
+                  <p className="text-xs text-white/30 mt-2">Selected: {colorOpt.label}</p>
+                )}
+              </div>
+
+              {/* Hub position */}
+              <div>
+                <label className="block text-sm text-white/60 mb-1">Hub network position</label>
+                <p className="text-xs text-white/30 mb-2">
+                  Drag the node to position it, or edit the numbers directly. Canvas centre = hub centre (0,0).
+                </p>
+                <HubCanvas
+                  x={form.hubPositionX}
+                  y={form.hubPositionY}
+                  iconName={form.iconName}
+                  gradient={form.gradient}
+                  onChange={(x, y) => { set('hubPositionX', x); set('hubPositionY', y); }}
+                />
+              </div>
+            </>
+          )}
+
+          {/* ---- LINKS ---- */}
+          {tab === 'links' && (
+            <div className="space-y-3">
+              <p className="text-white/40 text-sm">Toggle which links appear on the product card.</p>
+              {(Object.entries(LINK_LABELS) as [LinkKey, string][]).map(([key, label]) => {
+                const active = !!(form.links ?? {})[key];
+                return (
+                  <div
+                    key={key}
+                    className={`flex items-center justify-between p-4 rounded-xl border transition-colors ${
+                      active
+                        ? 'bg-emerald-500/8 border-emerald-500/20'
+                        : 'bg-white/3 border-white/8'
+                    }`}
+                  >
+                    <div>
+                      <p className={`text-sm font-medium ${active ? 'text-white' : 'text-white/50'}`}>{label}</p>
+                      <p className="text-xs text-white/30 mt-0.5">{active ? 'Visible on product card' : 'Hidden'}</p>
+                    </div>
+                    <button
+                      onClick={() => toggleLink(key)}
+                      className={`w-12 h-6 rounded-full relative transition-colors ${
+                        active ? 'bg-emerald-500' : 'bg-white/10'
+                      }`}
+                    >
+                      <span className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-all ${
+                        active ? 'left-6' : 'left-0.5'
+                      }`} />
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          {/* ---- DEMO CONTENT ---- */}
+          {tab === 'demo' && (
+            <div className="space-y-4">
+              <p className="text-white/40 text-sm">Configure the demo section shown on the landing page.</p>
+
+              <div>
+                <label className="block text-sm text-white/60 mb-1.5">Agent name / status label</label>
+                <input
+                  value={form.agentStatus ?? ''}
+                  onChange={(e) => set('agentStatus', e.target.value)}
+                  placeholder="e.g. AI Agent"
+                  className="w-full bg-[#1a1b23] border border-white/10 rounded-xl px-4 py-3 text-sm text-white outline-none focus:border-blue-500/50 transition-colors"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm text-white/60 mb-1.5">Feature section title</label>
+                <input
+                  value={form.demoFeatureTitle ?? ''}
+                  onChange={(e) => set('demoFeatureTitle', e.target.value)}
+                  placeholder="e.g. Key Capabilities"
+                  className="w-full bg-[#1a1b23] border border-white/10 rounded-xl px-4 py-3 text-sm text-white outline-none focus:border-blue-500/50 transition-colors"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm text-white/60 mb-1.5">
+                  Features <span className="text-white/30 font-normal">(one per line)</span>
+                </label>
+                <textarea
+                  value={(form.demoFeatures ?? []).join('\n')}
+                  onChange={(e) => set('demoFeatures', e.target.value.split('\n').filter(Boolean))}
+                  rows={4}
+                  placeholder="Natural language processing&#10;Real-time analytics&#10;Auto-classification"
+                  className="w-full bg-[#1a1b23] border border-white/10 rounded-xl px-4 py-3 text-sm text-white outline-none focus:border-blue-500/50 transition-colors resize-none"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm text-white/60 mb-1.5">
+                  Sample prompts <span className="text-white/30 font-normal">(one per line)</span>
+                </label>
+                <textarea
+                  value={(form.demoPrompts ?? []).join('\n')}
+                  onChange={(e) => set('demoPrompts', e.target.value.split('\n').filter(Boolean))}
+                  rows={4}
+                  placeholder="Summarize last quarter's data&#10;Find anomalies in Q3"
+                  className="w-full bg-[#1a1b23] border border-white/10 rounded-xl px-4 py-3 text-sm text-white outline-none focus:border-blue-500/50 transition-colors resize-none"
+                />
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Footer */}
+        <div className="flex gap-3 px-6 py-4 border-t border-white/10 flex-shrink-0">
+          <button
+            onClick={onClose}
+            className="flex-1 py-2.5 rounded-xl border border-white/10 text-white/50 text-sm hover:bg-white/5 transition-colors"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={() => onSave(form)}
+            className="flex-1 py-2.5 rounded-xl bg-gradient-to-r from-blue-500 to-purple-600 text-white text-sm font-medium hover:opacity-90 transition-opacity flex items-center justify-center gap-2"
+          >
+            <Check className="w-4 h-4" />
+            Save Changes
+          </button>
+        </div>
+      </motion.div>
+    </div>
   );
 }
 
-//  Product row 
-
-function ProductRow({ product, isDeleted, onEdit, onDelete, onRestore }: {
-  product: { id: string; name: string; gradient: string; icon: string };
-  isDeleted: boolean;
-  onEdit: () => void;
-  onDelete: () => void;
-  onRestore: () => void;
+/* ---------------------------------------------------------- */
+/* Product row                                                */
+/* ---------------------------------------------------------- */
+function ProductRow({
+  id, name, tagline, iconName, gradient, links, isBase, isDeleted,
+  onEdit, onDelete, onRestore,
+}: {
+  id: string; name: string; tagline: string; iconName: string;
+  gradient: string; links: Record<string, string>;
+  isBase: boolean; isDeleted: boolean;
+  onEdit: () => void; onDelete: () => void; onRestore: () => void;
 }) {
-  const Icon = ICON_REGISTRY[product.icon] ?? ICON_REGISTRY['Brain'];
+  const IconComp  = ICON_REGISTRY[iconName] ?? ICON_REGISTRY['Brain'];
+  const linkKeys: LinkKey[] = ['learnMore', 'requestDemo', 'documentation'];
+
   return (
-    <div className={`flex items-center gap-4 p-4 rounded-2xl border transition-all ${
-      isDeleted
-        ? 'bg-red-500/5 border-red-500/20 opacity-50'
-        : 'bg-white/5 border-white/10 hover:bg-white/8'
+    <div className={`flex items-center gap-4 p-4 rounded-2xl border transition-colors ${
+      isDeleted ? 'border-white/5 bg-white/2 opacity-55' : 'border-white/8 bg-[#13141a] hover:bg-[#16171f]'
     }`}>
-      <div className={`w-10 h-10 bg-gradient-to-br ${product.gradient} rounded-xl flex items-center justify-center shrink-0`}>
-        <Icon className="w-5 h-5 text-white" />
+      <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${gradient} flex items-center justify-center flex-shrink-0`}>
+        <IconComp className="w-6 h-6 text-white" />
       </div>
-      <p className="flex-1 font-medium text-sm">{product.name}</p>
-      {isDeleted ? (
-        <button onClick={onRestore} className="flex items-center gap-1.5 px-3 py-1.5 bg-green-500/20 border border-green-500/30 rounded-xl text-xs text-green-400 hover:bg-green-500/30 transition-colors">
-          <Eye className="w-3.5 h-3.5" /> Restore
-        </button>
-      ) : (
-        <div className="flex gap-2">
-          <button onClick={onEdit} className="flex items-center gap-1.5 px-3 py-1.5 bg-white/5 border border-white/10 rounded-xl text-xs hover:bg-white/10 transition-colors">
-            <Edit2 className="w-3.5 h-3.5" /> Edit
-          </button>
-          <button onClick={onDelete} className="flex items-center gap-1.5 px-3 py-1.5 bg-red-500/10 border border-red-500/20 rounded-xl text-xs text-red-400 hover:bg-red-500/20 transition-colors">
-            <Trash2 className="w-3.5 h-3.5" /> Delete
-          </button>
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-2 flex-wrap mb-0.5">
+          <span className="text-white font-medium text-sm">{name}</span>
+          <span className="px-2 py-0.5 text-xs rounded-full bg-white/8 text-white/40 border border-white/10">
+            {isBase ? 'base config' : 'added'}
+          </span>
+          {isDeleted && (
+            <span className="px-2 py-0.5 text-xs rounded-full bg-red-500/15 text-red-400 border border-red-500/20">
+              deleted
+            </span>
+          )}
         </div>
+        <p className="text-white/35 text-xs truncate mb-2">{tagline}</p>
+        <div className="flex gap-1.5 flex-wrap">
+          {linkKeys.map((key) => {
+            const active = !!links?.[key];
+            return (
+              <span
+                key={key}
+                className={`flex items-center gap-1 px-2 py-0.5 rounded-full text-xs ${
+                  active
+                    ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
+                    : 'bg-white/5 text-white/20 border border-white/8'
+                }`}
+              >
+                {active ? <Check className="w-2.5 h-2.5" /> : <X className="w-2.5 h-2.5" />}
+                {LINK_LABELS[key]}
+              </span>
+            );
+          })}
+        </div>
+      </div>
+      {!isDeleted ? (
+        <div className="flex items-center gap-1 flex-shrink-0">
+          <button onClick={onEdit}    className="w-8 h-8 rounded-lg flex items-center justify-center text-white/25 hover:text-white hover:bg-white/10 transition-all"><Pencil  className="w-3.5 h-3.5" /></button>
+          <button onClick={onDelete}  className="w-8 h-8 rounded-lg flex items-center justify-center text-white/25 hover:text-red-400 hover:bg-red-500/10 transition-all"><Trash2  className="w-3.5 h-3.5" /></button>
+          <button onClick={onRestore} className="w-8 h-8 rounded-lg flex items-center justify-center text-white/15 transition-all" disabled><RotateCcw className="w-3.5 h-3.5" /></button>
+        </div>
+      ) : (
+        <button onClick={onRestore} className="w-8 h-8 rounded-lg flex items-center justify-center text-white/30 hover:text-emerald-400 hover:bg-emerald-500/10 transition-all flex-shrink-0">
+          <RotateCcw className="w-3.5 h-3.5" />
+        </button>
       )}
     </div>
   );
 }
 
-//  Main page 
+/* ---------------------------------------------------------- */
+/* Dashboard                                                   */
+/* ---------------------------------------------------------- */
+function AdminDashboard() {
+  const { products, adminStorage, saveAdminStorage } = useProducts();
+  const [modal, setModal] = useState<{ mode: 'add' } | { mode: 'edit'; id: string } | null>(null);
 
-export default function AdminPage() {
-  const { adminStorage, saveAdminStorage } = useProducts();
+  const { overrides, additions, deletedIds } = adminStorage;
 
-  //  Auth state 
-  const [pin, setPin] = useState('');
-  const [showPin, setShowPin] = useState(false);
-  const [authed, setAuthed] = useState(false);
-  const [pinError, setPinError] = useState(false);
-  const [saving, setSaving] = useState(false);
+  const activeCount  = products.length;
+  const withLinks    = products.filter((p) => Object.keys(p.links ?? {}).length > 0).length;
+  const deletedCount = deletedIds.length;
 
-  //  Edit state 
-  const [editingId, setEditingId] = useState<string | null>(null);
-
-  //  Helpers 
-  const storage: AdminStorage = adminStorage ?? EMPTY_ADMIN_STORAGE;
-
-  async function persist(next: AdminStorage) {
-    setSaving(true);
-    try { await saveAdminStorage(next); } finally { setSaving(false); }
-  }
-
-  function handleLogin() {
-    if (pin === ADMIN_PIN) { setAuthed(true); setPinError(false); }
-    else { setPinError(true); setPin(''); }
-  }
-
-  //  Override helpers 
-  function saveOverride(productId: string, form: SerializedProduct) {
-    const next: AdminStorage = {
-      ...storage,
-      overrides: {
-        ...storage.overrides,
-        [productId]: {
-          name: form.name,
-          tagline: form.tagline,
-          iconName: form.iconName,
-          gradient: form.gradient,
-          accent: form.accent,
-          bgTint: form.bgTint,
-          hubPositionX: form.hubPositionX,
-          hubPositionY: form.hubPositionY,
-          links: form.links,
-        },
-      },
+  const baseRows = PRODUCTS.map((p) => {
+    const ov = overrides[p.id];
+    return {
+      id: p.id, isBase: true,
+      name:      ov?.name     ?? p.name,
+      tagline:   ov?.tagline  ?? p.tagline,
+      iconName:  ov?.iconName ?? 'Brain',
+      gradient:  ov?.gradient ?? 'from-blue-500 to-cyan-500',
+      links:     ((ov?.links ?? p.links) as Record<string, string>) ?? {},
+      isDeleted: deletedIds.includes(p.id),
     };
-    persist(next);
-    setEditingId(null);
+  });
+
+  const addedRows = (additions ?? []).map((a) => ({
+    id: a.id, isBase: false,
+    name: a.name, tagline: a.tagline,
+    iconName: a.iconName, gradient: a.gradient,
+    links: (a.links ?? {}) as Record<string, string>,
+    isDeleted: deletedIds.includes(a.id),
+  }));
+
+  const allRows = [...baseRows, ...addedRows];
+
+  async function handleDelete(id: string) {
+    await saveAdminStorage({ ...adminStorage, deletedIds: [...deletedIds, id] });
+  }
+  async function handleRestore(id: string) {
+    await saveAdminStorage({ ...adminStorage, deletedIds: deletedIds.filter((d) => d !== id) });
+  }
+  async function handleSave(updated: SerializedProduct) {
+    const isBase = PRODUCTS.some((p) => p.id === updated.id);
+    if (isBase) {
+      await saveAdminStorage({
+        ...adminStorage,
+        overrides: { ...overrides, [updated.id]: {
+          name: updated.name, tagline: updated.tagline,
+          iconName: updated.iconName, gradient: updated.gradient,
+          accent: updated.accent, bgTint: updated.bgTint,
+          hubPositionX: updated.hubPositionX, hubPositionY: updated.hubPositionY,
+          links: updated.links,
+        }},
+      });
+    } else {
+      await saveAdminStorage({
+        ...adminStorage,
+        additions: (additions ?? []).map((a) => a.id === updated.id ? updated : a),
+      });
+    }
+    setModal(null);
+  }
+  async function handleAdd(p: SerializedProduct) {
+    await saveAdminStorage({ ...adminStorage, additions: [...(additions ?? []), p] });
+    setModal(null);
   }
 
-  function toggleDelete(productId: string) {
-    const deletedIds = storage.deletedIds ?? [];
-    const next: AdminStorage = {
-      ...storage,
-      deletedIds: deletedIds.includes(productId)
-        ? deletedIds.filter((id) => id !== productId)
-        : [...deletedIds, productId],
-    };
-    persist(next);
+  function getEditInitial(id: string): SerializedProduct {
+    const base = PRODUCTS.find((p) => p.id === id);
+    if (base) {
+      const ov = overrides[id];
+      return {
+        id,
+        name:      ov?.name     ?? base.name,
+        tagline:   ov?.tagline  ?? base.tagline,
+        iconName:  ov?.iconName ?? 'Brain',
+        gradient:  ov?.gradient ?? 'from-blue-500 to-cyan-500',
+        accent:    ov?.accent   ?? base.accent,
+        bgTint:    ov?.bgTint   ?? base.bgTint,
+        hubPositionX: ov?.hubPositionX ?? (base.hubPosition?.x ?? 150),
+        hubPositionY: ov?.hubPositionY ?? (base.hubPosition?.y ?? -80),
+        links:     ((ov?.links ?? base.links) as Record<string, string>) ?? {},
+        agentStatus: 'Ready', demoActions: [], demoPrompts: [],
+        demoCapabilities: [], demoFeatureTitle: 'Key Capabilities', demoFeatures: [],
+      };
+    }
+    return (additions ?? []).find((a) => a.id === id) ?? { ...DEFAULT_NEW, id };
   }
-
-  //  Addition helpers 
-  function addProduct() {
-    const id = `custom-${Date.now()}`;
-    const newProd: SerializedProduct = { ...DEFAULT_NEW_PRODUCT, id };
-    const next: AdminStorage = {
-      ...storage,
-      additions: [...(storage.additions ?? []), newProd],
-    };
-    persist(next);
-    setEditingId(id);
-  }
-
-  function saveAddition(form: SerializedProduct) {
-    const next: AdminStorage = {
-      ...storage,
-      additions: (storage.additions ?? []).map((p) => p.id === form.id ? form : p),
-    };
-    persist(next);
-    setEditingId(null);
-  }
-
-  function deleteAddition(id: string) {
-    const next: AdminStorage = {
-      ...storage,
-      additions: (storage.additions ?? []).filter((p) => p.id !== id),
-    };
-    persist(next);
-  }
-
-  //  Login screen 
-
-  if (!authed) {
-    return (
-      <div className="min-h-screen bg-black text-white flex items-center justify-center px-6">
-        <motion.div
-          initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }}
-          className="w-full max-w-sm"
-        >
-          <div className="w-14 h-14 bg-gradient-to-br from-blue-500 to-purple-600 rounded-2xl flex items-center justify-center mx-auto mb-6">
-            <Lock className="w-7 h-7 text-white" />
-          </div>
-          <h1 className="text-2xl font-bold text-center mb-1">Admin Panel</h1>
-          <p className="text-sm text-white/40 text-center mb-8">Enter your PIN to continue</p>
-
-          <div className="relative mb-4">
-            <input
-              type={showPin ? 'text' : 'password'}
-              value={pin}
-              onChange={(e) => { setPin(e.target.value); setPinError(false); }}
-              onKeyDown={(e) => e.key === 'Enter' && handleLogin()}
-              placeholder="Admin PIN"
-              className={`w-full bg-white/5 border rounded-2xl px-5 py-4 text-lg tracking-widest outline-none transition-colors ${
-                pinError ? 'border-red-500/50' : 'border-white/10 focus:border-white/30'
-              }`}
-            />
-            <button onClick={() => setShowPin(!showPin)}
-              className="absolute right-4 top-1/2 -translate-y-1/2 text-white/40 hover:text-white/70 transition-colors">
-              {showPin ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-            </button>
-          </div>
-
-          {pinError && (
-            <p className="text-sm text-red-400 text-center mb-4">Incorrect PIN. Try again.</p>
-          )}
-
-          <button onClick={handleLogin}
-            className="w-full py-4 bg-gradient-to-r from-blue-500 to-purple-600 rounded-2xl font-medium hover:opacity-90 transition-opacity">
-            Unlock
-          </button>
-        </motion.div>
-      </div>
-    );
-  }
-
-  //  Admin panel 
 
   return (
-    <div className="min-h-screen bg-black text-white">
-      {/* Header */}
-      <div className="sticky top-0 z-50 bg-black/80 backdrop-blur-xl border-b border-white/10 px-6 py-4 flex items-center gap-4">
-        <a href="/" className="flex items-center gap-2 text-sm text-white/50 hover:text-white transition-colors">
-          <ChevronLeft className="w-4 h-4" /> Back to site
-        </a>
-        <div className="flex-1" />
-        <h1 className="font-semibold">Admin Panel</h1>
-        <div className="flex-1 flex justify-end">
-          {saving && <span className="text-xs text-blue-400 animate-pulse">Saving</span>}
+    <div className="min-h-screen bg-[#0a0b0f] text-white">
+      <header className="border-b border-white/8 bg-[#0d0e14]">
+        <div className="max-w-5xl mx-auto px-6 py-4 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl flex items-center justify-center">
+              <Globe className="w-5 h-5 text-white" />
+            </div>
+            <span className="text-white font-semibold">Trinamix Admin</span>
+            <span className="text-white/20 mx-1">|</span>
+            <span className="text-white/40 text-sm">Product Registry</span>
+          </div>
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-1.5">
+              <span className="w-2 h-2 rounded-full bg-emerald-400 inline-block animate-pulse" />
+              <span className="text-emerald-400 text-sm">Live</span>
+            </div>
+            <a href="/" className="flex items-center gap-1.5 text-white/40 hover:text-white text-sm transition-colors">
+              <ArrowLeft className="w-4 h-4" />
+              Back to site
+            </a>
+          </div>
         </div>
-      </div>
+      </header>
 
-      <div className="max-w-3xl mx-auto px-6 py-10 space-y-10">
+      <main className="max-w-5xl mx-auto px-6 py-8">
+        <div className="grid grid-cols-3 gap-4 mb-8">
+          {[
+            { v: activeCount,  l: 'Active products'      },
+            { v: withLinks,    l: 'With links'           },
+            { v: deletedCount, l: 'Deleted (restorable)' },
+          ].map(({ v, l }) => (
+            <div key={l} className="bg-[#13141a] border border-white/8 rounded-2xl p-5">
+              <div className="text-3xl font-bold text-white mb-1">{v}</div>
+              <div className="text-sm text-white/40">{l}</div>
+            </div>
+          ))}
+        </div>
 
-        {/*  Base products  */}
-        <section>
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold">Products</h2>
-            <button onClick={addProduct}
-              className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-500 to-purple-600 rounded-xl text-sm font-medium hover:opacity-90 transition-opacity">
-              <Plus className="w-4 h-4" /> Add Product
-            </button>
-          </div>
-
-          <div className="space-y-3">
-            {PRODUCTS.map((p) => {
-              const isDeleted = (storage.deletedIds ?? []).includes(p.id);
-              const override = storage.overrides?.[p.id];
-              const displayName = override?.name ?? p.name;
-              const displayGradient = override?.gradient ?? p.gradient;
-              const displayIcon = override?.iconName ?? p.icon.displayName ?? 'Brain';
-
-              return (
-                <div key={p.id}>
-                  <ProductRow
-                    product={{ id: p.id, name: displayName, gradient: displayGradient, icon: displayIcon }}
-                    isDeleted={isDeleted}
-                    onEdit={() => setEditingId(editingId === p.id ? null : p.id)}
-                    onDelete={() => toggleDelete(p.id)}
-                    onRestore={() => toggleDelete(p.id)}
-                  />
-                  <AnimatePresence>
-                    {editingId === p.id && (
-                      <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }}
-                        exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.3 }}
-                        className="overflow-hidden mt-2">
-                        <EditForm
-                          initial={{
-                            id: p.id,
-                            name: override?.name ?? p.name,
-                            tagline: override?.tagline ?? p.tagline,
-                            iconName: override?.iconName ?? 'Brain',
-                            gradient: override?.gradient ?? p.gradient,
-                            accent: override?.accent ?? p.accent,
-                            bgTint: override?.bgTint ?? p.bgTint,
-                            hubPositionX: override?.hubPositionX ?? p.hubPosition.x,
-                            hubPositionY: override?.hubPositionY ?? p.hubPosition.y,
-                            links: override?.links ?? p.links,
-                            agentStatus: 'Ready',
-                            demoActions: [],
-                            demoPrompts: [],
-                            demoCapabilities: [],
-                            demoFeatureTitle: 'Key Capabilities',
-                            demoFeatures: [],
-                          }}
-                          onSave={(form) => saveOverride(p.id, form)}
-                          onCancel={() => setEditingId(null)}
-                        />
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
-                </div>
-              );
-            })}
-
-            {/* Custom additions */}
-            {(storage.additions ?? []).map((p) => (
-              <div key={p.id}>
-                <ProductRow
-                  product={{ id: p.id, name: p.name, gradient: p.gradient, icon: p.iconName }}
-                  isDeleted={false}
-                  onEdit={() => setEditingId(editingId === p.id ? null : p.id)}
-                  onDelete={() => deleteAddition(p.id)}
-                  onRestore={() => {}}
-                />
-                <AnimatePresence>
-                  {editingId === p.id && (
-                    <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }}
-                      exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.3 }}
-                      className="overflow-hidden mt-2">
-                      <EditForm
-                        initial={p}
-                        onSave={(form) => saveAddition(form)}
-                        onCancel={() => setEditingId(null)}
-                      />
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-              </div>
-            ))}
-          </div>
-        </section>
-
-        {/*  Danger zone  */}
-        <section className="border border-red-500/20 rounded-2xl p-6">
-          <h2 className="text-sm font-semibold text-red-400 mb-3">Danger Zone</h2>
-          <p className="text-xs text-white/50 mb-4">
-            Reset all overrides, additions and deletions. The site will return to its default state.
-          </p>
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-lg font-semibold text-white">Products</h2>
           <button
-            onClick={() => { if (confirm('Reset all admin changes?')) persist(EMPTY_ADMIN_STORAGE); }}
-            className="px-4 py-2 bg-red-500/10 border border-red-500/20 rounded-xl text-sm text-red-400 hover:bg-red-500/20 transition-colors"
+            onClick={() => setModal({ mode: 'add' })}
+            className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-500 to-purple-600 rounded-xl text-sm font-medium text-white hover:opacity-90 transition-opacity"
+          >
+            <Plus className="w-4 h-4" />
+            Add product
+          </button>
+        </div>
+
+        <div className="space-y-2">
+          {allRows.map((row) => (
+            <ProductRow
+              key={row.id}
+              {...row}
+              onEdit={() => setModal({ mode: 'edit', id: row.id })}
+              onDelete={() => handleDelete(row.id)}
+              onRestore={() => handleRestore(row.id)}
+            />
+          ))}
+        </div>
+
+        <div className="mt-10 border border-red-500/15 rounded-2xl p-5">
+          <h3 className="text-red-400 font-medium text-sm mb-1">Danger zone</h3>
+          <p className="text-white/30 text-xs mb-4">Reset all admin changes and restore original configuration.</p>
+          <button
+            onClick={async () => { if (confirm('Reset everything?')) await saveAdminStorage(EMPTY_ADMIN_STORAGE); }}
+            className="px-4 py-2 border border-red-500/30 text-red-400 rounded-xl text-sm hover:bg-red-500/10 transition-colors"
           >
             Reset to defaults
           </button>
-        </section>
-      </div>
+        </div>
+      </main>
+
+      <AnimatePresence>
+        {modal?.mode === 'add' && (
+          <ProductModal key="add" title="Add product" initial={{ ...DEFAULT_NEW, id: genId() }} onSave={handleAdd} onClose={() => setModal(null)} />
+        )}
+        {modal?.mode === 'edit' && (
+          <ProductModal key={modal.id} title={`Edit -- ${allRows.find(r => r.id === modal.id)?.name ?? ''}`} initial={getEditInitial(modal.id)} onSave={handleSave} onClose={() => setModal(null)} />
+        )}
+      </AnimatePresence>
     </div>
   );
+}
+
+/* ---------------------------------------------------------- */
+/* Export                                                      */
+/* ---------------------------------------------------------- */
+export default function AdminPage() {
+  const [authed, setAuthed] = useState(false);
+  return authed ? <AdminDashboard /> : <LoginScreen onLogin={() => setAuthed(true)} />;
 }
