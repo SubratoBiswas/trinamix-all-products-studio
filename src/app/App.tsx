@@ -10,7 +10,7 @@ function SyncLoader() {
   return (
     <div className="fixed inset-0 z-[9999] bg-black flex flex-col items-center justify-center gap-4">
       <div className="w-12 h-12 border-4 border-white/10 border-t-blue-500 rounded-full animate-spin" />
-      <p className="text-white/40 text-sm">Syncing with database…</p>
+      <p className="text-white/40 text-sm">Syncing with database</p>
     </div>
   );
 }

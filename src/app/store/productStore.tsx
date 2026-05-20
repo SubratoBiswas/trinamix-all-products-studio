@@ -1,6 +1,6 @@
 /**
- * ═══════════════════════════════════════════════════════════════════════
- *  PRODUCT STORE  (MongoDB edition — replaces Firebase version)
+ * 
+ *  PRODUCT STORE  (MongoDB edition  replaces Firebase version)
  *
  *  Provides a React context that:
  *    1. Boots from localStorage (instant, no flash)
@@ -10,7 +10,7 @@
  *
  *  Consumers:
  *    const { products, syncing, adminStorage, saveAdminStorage } = useProducts();
- * ═══════════════════════════════════════════════════════════════════════
+ * 
  */
 
 import {
@@ -32,10 +32,10 @@ import {
 } from '../config/adminConfig';
 import { fetchRegistry, saveRegistry } from '../config/mongodb';
 
-// ─── Types ────────────────────────────────────────────────────────────────────
+//  Types 
 
 interface ProductContextValue {
-  /** Final merged product list — use this everywhere in the UI */
+  /** Final merged product list  use this everywhere in the UI */
   products: ProductConfig[];
   /** True while the initial MongoDB fetch is in flight */
   syncing: boolean;
@@ -45,9 +45,9 @@ interface ProductContextValue {
   saveAdminStorage: (next: AdminStorage) => Promise<void>;
 }
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
+//  Helpers 
 
-/** Deserialise a SerializedProduct (icon name → LucideIcon component) */
+/** Deserialise a SerializedProduct (icon name  LucideIcon component) */
 function deserialise(s: SerializedProduct): ProductConfig {
   return {
     id: s.id,
@@ -129,7 +129,7 @@ function writeLocalStorage(data: AdminStorage): void {
   }
 }
 
-// ─── Context ──────────────────────────────────────────────────────────────────
+//  Context 
 
 const ProductContext = createContext<ProductContextValue | null>(null);
 
@@ -138,7 +138,7 @@ export function ProductProvider({ children }: { children: ReactNode }) {
   const [adminStorage, setAdminStorage] = useState<AdminStorage>(readLocalStorage);
   const [syncing, setSyncing] = useState(true);
 
-  // Derived product list — recomputed whenever adminStorage changes
+  // Derived product list  recomputed whenever adminStorage changes
   const products = mergeProducts(adminStorage);
 
   // On mount: fetch latest from MongoDB and sync to local state

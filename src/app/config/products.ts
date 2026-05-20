@@ -1,30 +1,30 @@
 /**
- * ═══════════════════════════════════════════════════════════════════════
+ * 
  *  MASTER PRODUCT REGISTRY
  *
  *  This is the ONLY file you need to edit to:
- *    • Add a new product to the landing page
- *    • Update any product's name, description, metrics, or demo data
- *    • Set/change product URLs (learnMore, requestDemo, documentation)
- *    • Change the hub network graph layout (hubPosition)
+ *     Add a new product to the landing page
+ *     Update any product's name, description, metrics, or demo data
+ *     Set/change product URLs (learnMore, requestDemo, documentation)
+ *     Change the hub network graph layout (hubPosition)
  *
  *  HOW TO ADD A NEW PRODUCT
- *  ────────────────────────
+ *  
  *  1. Add a new entry to the PRODUCTS array below.
  *  2. Choose a `demo.type` from the existing types, or create a new
  *     demo component in src/app/components/demos/ and add its type here.
- *  3. That's it — the hub graph, product sections, and CTA buttons all
+ *  3. That's it  the hub graph, product sections, and CTA buttons all
  *     update automatically.
  *
  *  DEMO TYPES AVAILABLE
- *  ────────────────────
- *  'action-cards'     → AI agent with action list + NL prompts (EnterpriseAI style)
- *  'search'           → Enterprise search with AI answer panel (Ariv style)
- *  'document-flow'    → Document ingestion + extraction preview (Documantra style)
- *  'chart-scenarios'  → Scenario switcher + Recharts area chart (PriceSenseAI style)
- *  'network-map'      → Supply network SVG with nodes + scenario picker (SNO style)
- *  'alerts-map'       → Global map with alert markers + AI recs (ControlTower style)
- * ═══════════════════════════════════════════════════════════════════════
+ *  
+ *  'action-cards'      AI agent with action list + NL prompts (EnterpriseAI style)
+ *  'search'            Enterprise search with AI answer panel (Ariv style)
+ *  'document-flow'     Document ingestion + extraction preview (Documantra style)
+ *  'chart-scenarios'   Scenario switcher + Recharts area chart (PriceSenseAI style)
+ *  'network-map'       Supply network SVG with nodes + scenario picker (SNO style)
+ *  'alerts-map'        Global map with alert markers + AI recs (ControlTower style)
+ * 
  */
 
 import type { LucideIcon } from 'lucide-react';
@@ -35,9 +35,9 @@ import {
   Package, Truck, MapPin, AlertTriangle, CheckCircle as CheckIcon,
 } from 'lucide-react';
 
-// ─────────────────────────────────────────────────────────────────────────────
+// 
 // Shared types
-// ─────────────────────────────────────────────────────────────────────────────
+// 
 
 export interface ProductLinks {
   learnMore?: string;       // e.g. 'https://trinamix.com/ariv'
@@ -45,15 +45,15 @@ export interface ProductLinks {
   documentation?: string;   // e.g. 'https://docs.trinamix.com/ariv'
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
+// 
 // Demo data types (one interface per demo type)
-// ─────────────────────────────────────────────────────────────────────────────
+// 
 
-/* ── action-cards ── */
+/*  action-cards  */
 export interface ActionItem {
   label: string;
   status: string;
-  progress: number;   // 0 = not started, 1–99 = running, 100 = done
+  progress: number;   // 0 = not started, 199 = running, 100 = done
 }
 export interface CapabilityMetric {
   title: string;
@@ -70,7 +70,7 @@ export interface ActionCardsData {
   features: string[];
 }
 
-/* ── search ── */
+/*  search  */
 export interface SearchResult {
   title: string;
   resultType: string;
@@ -89,7 +89,7 @@ export interface SearchData {
   features: string[];
 }
 
-/* ── document-flow ── */
+/*  document-flow  */
 export interface FlowStep {
   icon: LucideIcon;
   label: string;
@@ -111,7 +111,7 @@ export interface DocumentFlowData {
   features: string[];
 }
 
-/* ── chart-scenarios ── */
+/*  chart-scenarios  */
 export interface ChartPoint {
   month: string;
   revenue: number;
@@ -147,11 +147,11 @@ export interface ChartScenariosData {
   features: string[];
 }
 
-/* ── network-map ── */
+/*  network-map  */
 export interface NetworkNode {
   id: string;
   nodeType: 'Supplier' | 'Warehouse' | 'DC' | 'Customer';
-  x: number;   // percentage 0–100
+  x: number;   // percentage 0100
   y: number;
   status: 'active' | 'warning';
 }
@@ -176,7 +176,7 @@ export interface NetworkMapData {
   features: string[];
 }
 
-/* ── alerts-map ── */
+/*  alerts-map  */
 export interface AlertMarker {
   id: number;
   alertType: 'critical' | 'warning' | 'info';
@@ -201,9 +201,9 @@ export interface AlertsMapData {
   features: string[];
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
+// 
 // Demo config discriminated union
-// ─────────────────────────────────────────────────────────────────────────────
+// 
 
 export type DemoConfig =
   | { type: 'action-cards';    data: ActionCardsData }
@@ -213,9 +213,9 @@ export type DemoConfig =
   | { type: 'network-map';     data: NetworkMapData }
   | { type: 'alerts-map';      data: AlertsMapData };
 
-// ─────────────────────────────────────────────────────────────────────────────
+// 
 // Product config
-// ─────────────────────────────────────────────────────────────────────────────
+// 
 
 export interface ProductConfig {
   id: string;
@@ -230,12 +230,12 @@ export interface ProductConfig {
   links: ProductLinks;
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// THE REGISTRY — edit here to add / remove / update products
-// ─────────────────────────────────────────────────────────────────────────────
+// 
+// THE REGISTRY  edit here to add / remove / update products
+// 
 
 export const PRODUCTS: ProductConfig[] = [
-  // ── 1. Enterprise AI ───────────────────────────────────────────────────────
+  //  1. Enterprise AI 
   {
     id: 'enterprise-ai',
     name: 'Enterprise AI',
@@ -256,7 +256,7 @@ export const PRODUCTS: ProductConfig[] = [
         agentName: 'AI Agent',
         agentStatus: 'Processing',
         actions: [
-          { label: 'Simulate Q3 Demand',  status: 'Running 2.4M scenarios…', progress: 75  },
+          { label: 'Simulate Q3 Demand',  status: 'Running 2.4M scenarios', progress: 75  },
           { label: 'Optimize Inventory',  status: 'Complete',                 progress: 100 },
           { label: 'Generate Report',     status: 'Ready to execute',         progress: 0   },
         ],
@@ -281,7 +281,7 @@ export const PRODUCTS: ProductConfig[] = [
     },
   },
 
-  // ── 2. Ariv ────────────────────────────────────────────────────────────────
+  //  2. Ariv 
   {
     id: 'ariv',
     name: 'Ariv',
@@ -304,9 +304,9 @@ export const PRODUCTS: ProductConfig[] = [
           'Based on current inventory data, 3 SKUs are at high risk with stock levels below safety thresholds. SKU-1024 (Office Supplies) requires immediate attention with only 4 days of stock remaining. Recommended action: increase purchase order by 2,500 units.',
         resultsLabel: 'Found 127 results across 8 systems',
         results: [
-          { title: 'Q2 Inventory Report',      resultType: 'Document',  icon: FileText, snippet: 'Current inventory levels across all SKUs with risk assessment…', source: 'ERP System'  },
-          { title: 'Supply Chain Policy 2026', resultType: 'Policy',    icon: Database, snippet: 'Updated guidelines for vendor management and procurement…',       source: 'SharePoint' },
-          { title: 'Sales Team Dashboard',     resultType: 'Dashboard', icon: Users,    snippet: 'Real-time sales metrics and performance indicators…',              source: 'Tableau'    },
+          { title: 'Q2 Inventory Report',      resultType: 'Document',  icon: FileText, snippet: 'Current inventory levels across all SKUs with risk assessment', source: 'ERP System'  },
+          { title: 'Supply Chain Policy 2026', resultType: 'Policy',    icon: Database, snippet: 'Updated guidelines for vendor management and procurement',       source: 'SharePoint' },
+          { title: 'Sales Team Dashboard',     resultType: 'Dashboard', icon: Users,    snippet: 'Real-time sales metrics and performance indicators',              source: 'Tableau'    },
         ],
         metrics: [
           { label: 'Data Sources',       value: '47+'    },
@@ -326,7 +326,7 @@ export const PRODUCTS: ProductConfig[] = [
     },
   },
 
-  // ── 3. Documantra ──────────────────────────────────────────────────────────
+  //  3. Documantra 
   {
     id: 'documantra',
     name: 'Documantra',
@@ -381,7 +381,7 @@ export const PRODUCTS: ProductConfig[] = [
     },
   },
 
-  // ── 4. Price Sense AI ──────────────────────────────────────────────────────
+  //  4. Price Sense AI 
   {
     id: 'pricesense',
     name: 'Price Sense AI',
@@ -464,7 +464,7 @@ export const PRODUCTS: ProductConfig[] = [
     },
   },
 
-  // ── 5. SNO ─────────────────────────────────────────────────────────────────
+  //  5. SNO 
   {
     id: 'sno',
     name: 'SNO',
@@ -532,7 +532,7 @@ export const PRODUCTS: ProductConfig[] = [
     },
   },
 
-  // ── 6. Control Tower ───────────────────────────────────────────────────────
+  //  6. Control Tower 
   {
     id: 'control-tower',
     name: 'Control Tower',
@@ -551,9 +551,9 @@ export const PRODUCTS: ProductConfig[] = [
       type: 'alerts-map',
       data: {
         alerts: [
-          { id: 1, alertType: 'critical', title: 'Port Delay – Shanghai',    description: '12 shipments affected, 3-day delay expected',  location: { x: 75, y: 40 }, impact: 'High',   recommendation: 'Reroute via Busan port'              },
-          { id: 2, alertType: 'warning',  title: 'Weather Alert – Midwest',  description: 'Severe weather impacting 8 delivery routes',   location: { x: 35, y: 35 }, impact: 'Medium', recommendation: 'Delay non-critical shipments by 24h' },
-          { id: 3, alertType: 'info',     title: 'Capacity Alert – WH-B',    description: 'Operating at 89% capacity',                   location: { x: 45, y: 60 }, impact: 'Low',    recommendation: 'Schedule inventory rebalancing'      },
+          { id: 1, alertType: 'critical', title: 'Port Delay  Shanghai',    description: '12 shipments affected, 3-day delay expected',  location: { x: 75, y: 40 }, impact: 'High',   recommendation: 'Reroute via Busan port'              },
+          { id: 2, alertType: 'warning',  title: 'Weather Alert  Midwest',  description: 'Severe weather impacting 8 delivery routes',   location: { x: 35, y: 35 }, impact: 'Medium', recommendation: 'Delay non-critical shipments by 24h' },
+          { id: 3, alertType: 'info',     title: 'Capacity Alert  WH-B',    description: 'Operating at 89% capacity',                   location: { x: 45, y: 60 }, impact: 'Low',    recommendation: 'Schedule inventory rebalancing'      },
         ],
         locationMarkers: [
           { x: 25, y: 45 },
@@ -583,9 +583,9 @@ export const PRODUCTS: ProductConfig[] = [
   },
 ];
 
-// ─────────────────────────────────────────────────────────────────────────────
+// 
 // Helpers
-// ─────────────────────────────────────────────────────────────────────────────
+// 
 
 export function getProduct(id: string): ProductConfig | undefined {
   return PRODUCTS.find((p) => p.id === id);

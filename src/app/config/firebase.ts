@@ -1,17 +1,17 @@
 /**
- * ═══════════════════════════════════════════════════════
+ * 
  *  FIREBASE CONFIGURATION
- *  ───────────────────────────────────────────────────────
+ *  
  *  HOW TO GET THESE VALUES:
  *
  *  1. Go to https://console.firebase.google.com
- *  2. Click "Add project" → give it a name → Continue
+ *  2. Click "Add project"  give it a name  Continue
  *  3. Once created, click the "</>" (Web) icon to add a web app
- *  4. Register the app (any nickname) → Copy the firebaseConfig object
+ *  4. Register the app (any nickname)  Copy the firebaseConfig object
  *  5. Paste the values into the FIREBASE_CONFIG object below
  *
  *  ENABLE REALTIME DATABASE:
- *  1. In Firebase Console → left sidebar → "Realtime Database"
+ *  1. In Firebase Console  left sidebar  "Realtime Database"
  *  2. Click "Create Database"
  *  3. Choose a region (us-central1 is fine)
  *  4. Start in TEST MODE (allows reads/writes for 30 days)
@@ -19,7 +19,7 @@
  *  6. Copy the database URL (looks like https://your-app-default-rtdb.firebaseio.com)
  *     and paste it as databaseURL below
  *
- *  FOR PRODUCTION — set proper security rules:
+ *  FOR PRODUCTION  set proper security rules:
  *  {
  *    "rules": {
  *      "admin": {
@@ -28,7 +28,7 @@
  *      }
  *    }
  *  }
- * ═══════════════════════════════════════════════════════
+ * 
  */
 
 import { initializeApp, getApps } from 'firebase/app';

@@ -1,12 +1,12 @@
 /**
- * AdminPage — PIN-protected product management panel.
+ * AdminPage  PIN-protected product management panel.
  *
  * After authenticating with ADMIN_PIN (adminConfig.ts),
  * an editor can:
- *   • Override name / tagline / icon / gradient / hub position / links
+ *    Override name / tagline / icon / gradient / hub position / links
  *     for any of the six base products
- *   • Add brand-new products (action-cards demo type)
- *   • Delete any product
+ *    Add brand-new products (action-cards demo type)
+ *    Delete any product
  *
  * All changes are saved to both localStorage and MongoDB via
  * the productStore's saveAdminStorage helper.
@@ -31,7 +31,7 @@ import {
 import { PRODUCTS } from '../config/products';
 import { useProducts } from '../store/productStore';
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
+//  Helpers 
 
 const DEFAULT_NEW_PRODUCT: Omit<SerializedProduct, 'id'> = {
   name: 'New Product',
@@ -51,7 +51,7 @@ const DEFAULT_NEW_PRODUCT: Omit<SerializedProduct, 'id'> = {
   demoFeatures: [],
 };
 
-// ─── Sub-components ───────────────────────────────────────────────────────────
+//  Sub-components 
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
@@ -75,7 +75,7 @@ function TextInput({ value, onChange, placeholder = '' }: {
   );
 }
 
-// ─── Product edit form ────────────────────────────────────────────────────────
+//  Product edit form 
 
 interface EditFormProps {
   initial: SerializedProduct;
@@ -170,7 +170,7 @@ function EditForm({ initial, onSave, onCancel }: EditFormProps) {
   );
 }
 
-// ─── Product row ──────────────────────────────────────────────────────────────
+//  Product row 
 
 function ProductRow({ product, isDeleted, onEdit, onDelete, onRestore }: {
   product: { id: string; name: string; gradient: string; icon: string };
@@ -208,22 +208,22 @@ function ProductRow({ product, isDeleted, onEdit, onDelete, onRestore }: {
   );
 }
 
-// ─── Main page ────────────────────────────────────────────────────────────────
+//  Main page 
 
 export default function AdminPage() {
   const { adminStorage, saveAdminStorage } = useProducts();
 
-  // ── Auth state ──
+  //  Auth state 
   const [pin, setPin] = useState('');
   const [showPin, setShowPin] = useState(false);
   const [authed, setAuthed] = useState(false);
   const [pinError, setPinError] = useState(false);
   const [saving, setSaving] = useState(false);
 
-  // ── Edit state ──
+  //  Edit state 
   const [editingId, setEditingId] = useState<string | null>(null);
 
-  // ── Helpers ──
+  //  Helpers 
   const storage: AdminStorage = adminStorage ?? EMPTY_ADMIN_STORAGE;
 
   async function persist(next: AdminStorage) {
@@ -236,7 +236,7 @@ export default function AdminPage() {
     else { setPinError(true); setPin(''); }
   }
 
-  // ── Override helpers ──
+  //  Override helpers 
   function saveOverride(productId: string, form: SerializedProduct) {
     const next: AdminStorage = {
       ...storage,
@@ -270,7 +270,7 @@ export default function AdminPage() {
     persist(next);
   }
 
-  // ── Addition helpers ──
+  //  Addition helpers 
   function addProduct() {
     const id = `custom-${Date.now()}`;
     const newProd: SerializedProduct = { ...DEFAULT_NEW_PRODUCT, id };
@@ -299,7 +299,7 @@ export default function AdminPage() {
     persist(next);
   }
 
-  // ─── Login screen ────────────────────────────────────────────────────────────
+  //  Login screen 
 
   if (!authed) {
     return (
@@ -344,7 +344,7 @@ export default function AdminPage() {
     );
   }
 
-  // ─── Admin panel ─────────────────────────────────────────────────────────────
+  //  Admin panel 
 
   return (
     <div className="min-h-screen bg-black text-white">
@@ -356,13 +356,13 @@ export default function AdminPage() {
         <div className="flex-1" />
         <h1 className="font-semibold">Admin Panel</h1>
         <div className="flex-1 flex justify-end">
-          {saving && <span className="text-xs text-blue-400 animate-pulse">Saving…</span>}
+          {saving && <span className="text-xs text-blue-400 animate-pulse">Saving</span>}
         </div>
       </div>
 
       <div className="max-w-3xl mx-auto px-6 py-10 space-y-10">
 
-        {/* ── Base products ── */}
+        {/*  Base products  */}
         <section>
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-lg font-semibold">Products</h2>
@@ -451,7 +451,7 @@ export default function AdminPage() {
           </div>
         </section>
 
-        {/* ── Danger zone ── */}
+        {/*  Danger zone  */}
         <section className="border border-red-500/20 rounded-2xl p-6">
           <h2 className="text-sm font-semibold text-red-400 mb-3">Danger Zone</h2>
           <p className="text-xs text-white/50 mb-4">

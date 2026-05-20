@@ -106,7 +106,7 @@ export function EnterpriseAI() {
                         </button>
                       )}
                       {action.progress === 100 && (
-                        <div className="text-xs text-green-400 font-medium">✓ Done</div>
+                        <div className="text-xs text-green-400 font-medium"> Done</div>
                       )}
                     </div>
 

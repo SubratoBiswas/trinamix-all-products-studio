@@ -16,7 +16,7 @@ if (!MONGODB_URI) {
   process.exit(1);
 }
 
-// Mongoose schema — single "singleton" document stores all AdminStorage
+// Mongoose schema  single "singleton" document stores all AdminStorage
 var registrySchema = new mongoose.Schema(
   {
     _id:        { type: String, default: 'singleton' },

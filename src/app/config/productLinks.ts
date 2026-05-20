@@ -1,15 +1,15 @@
 /**
- * ─────────────────────────────────────────────────────────────────────────────
+ * 
  *  PRODUCT LINKS CONFIGURATION
  *  Edit the URLs below to update the CTAs on every product section.
  *
  *  Each product supports up to three independent links:
- *    learnMore    → "Learn More" button  (opens in new tab)
- *    requestDemo  → "Request Demo" button (opens in new tab)
- *    documentation → "Docs" button (opens in new tab)
+ *    learnMore     "Learn More" button  (opens in new tab)
+ *    requestDemo   "Request Demo" button (opens in new tab)
+ *    documentation  "Docs" button (opens in new tab)
  *
  *  Leave a field as an empty string ("") or undefined to hide that button.
- * ─────────────────────────────────────────────────────────────────────────────
+ * 
  */
 
 export interface ProductLinks {

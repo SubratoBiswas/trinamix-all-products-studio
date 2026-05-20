@@ -42,7 +42,7 @@ export default function Landing() {
 
       {/* Footer spacer */}
       <footer className="py-12 text-center text-sm text-white/20 border-t border-white/5">
-        © {new Date().getFullYear()} Trinamix — Enterprise AI Platform
+         {new Date().getFullYear()} Trinamix  Enterprise AI Platform
       </footer>
     </div>
   );

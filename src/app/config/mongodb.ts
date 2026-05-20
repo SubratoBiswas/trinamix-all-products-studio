@@ -1,25 +1,25 @@
 /**
- * ═══════════════════════════════════════════════════════
+ * 
  *  MONGODB API CLIENT
- *  ───────────────────────────────────────────────────────
+ *  
  *  Replaces firebase.ts.
  *
  *  All reads / writes go through the Express backend at
  *  VITE_API_URL (default: http://localhost:3001).
  *
  *  The backend exposes two endpoints:
- *    GET  /api/registry  → returns AdminStorage JSON (or null)
- *    POST /api/registry  → saves AdminStorage JSON, returns { ok: true }
- * ═══════════════════════════════════════════════════════
+ *    GET  /api/registry   returns AdminStorage JSON (or null)
+ *    POST /api/registry   saves AdminStorage JSON, returns { ok: true }
+ * 
  */
 
 import type { AdminStorage } from './adminConfig';
 
-/** Base URL for the backend API — set VITE_API_URL in your .env file */
+/** Base URL for the backend API  set VITE_API_URL in your .env file */
 const API_BASE =
   (import.meta.env.VITE_API_URL as string | undefined) ?? 'http://localhost:3001';
 
-// ─── Read ─────────────────────────────────────────────────────────────────────
+//  Read 
 
 /**
  * Fetch the current AdminStorage document from MongoDB.
@@ -37,7 +37,7 @@ export async function fetchRegistry(): Promise<AdminStorage | null> {
   }
 }
 
-// ─── Write ────────────────────────────────────────────────────────────────────
+//  Write 
 
 /**
  * Persist the full AdminStorage document to MongoDB.

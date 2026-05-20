@@ -1,6 +1,6 @@
 /**
  * GenericProductSection
- * ─────────────────────
+ * 
  * Data-driven section renderer used by ProductSections.tsx.
  * Reads everything from ProductConfig (products.ts) so admin edits
  * (overrides / additions) are reflected without touching this file.
@@ -24,7 +24,7 @@ import {
 import type { ProductConfig } from '../config/products';
 import { useProducts } from '../store/productStore';
 
-// ─── CTA ─────────────────────────────────────────────────────────────────────
+//  CTA 
 
 function CTA({ product }: { product: ProductConfig }) {
   const { products } = useProducts();
@@ -63,7 +63,7 @@ function CTA({ product }: { product: ProductConfig }) {
   );
 }
 
-// ─── Shared card wrapper ──────────────────────────────────────────────────────
+//  Shared card wrapper 
 
 function Card({ className = '', children }: { className?: string; children: React.ReactNode }) {
   return (
@@ -73,7 +73,7 @@ function Card({ className = '', children }: { className?: string; children: Reac
   );
 }
 
-// ─── Features list (right-column bottom card) ─────────────────────────────────
+//  Features list (right-column bottom card) 
 
 function FeatureList({ title, features, accent }: { title: string; features: string[]; accent: string }) {
   return (
@@ -91,11 +91,11 @@ function FeatureList({ title, features, accent }: { title: string; features: str
   );
 }
 
-// ═══════════════════════════════════════════════════════════════════════════════
+// 
 // Demo panels (one per demo type)
-// ═══════════════════════════════════════════════════════════════════════════════
+// 
 
-// ── 1. action-cards ───────────────────────────────────────────────────────────
+//  1. action-cards 
 
 function ActionCardsDemo({ product }: { product: ProductConfig }) {
   if (product.demo.type !== 'action-cards') return null;
@@ -196,7 +196,7 @@ function ActionCardsDemo({ product }: { product: ProductConfig }) {
   );
 }
 
-// ── 2. search ─────────────────────────────────────────────────────────────────
+//  2. search 
 
 function SearchDemo({ product }: { product: ProductConfig }) {
   if (product.demo.type !== 'search') return null;
@@ -291,7 +291,7 @@ function SearchDemo({ product }: { product: ProductConfig }) {
   );
 }
 
-// ── 3. document-flow ─────────────────────────────────────────────────────────
+//  3. document-flow 
 
 function DocumentFlowDemo({ product }: { product: ProductConfig }) {
   if (product.demo.type !== 'document-flow') return null;
@@ -321,7 +321,7 @@ function DocumentFlowDemo({ product }: { product: ProductConfig }) {
                   <div>
                     <p className="text-sm font-medium">{step.label}</p>
                     <p className={`text-xs ${done ? 'text-green-400' : 'text-orange-400'}`}>
-                      {done ? 'Complete' : 'Processing…'}
+                      {done ? 'Complete' : 'Processing'}
                     </p>
                   </div>
                 </motion.div>
@@ -406,7 +406,7 @@ function DocumentFlowDemo({ product }: { product: ProductConfig }) {
   );
 }
 
-// ── 4. chart-scenarios ───────────────────────────────────────────────────────
+//  4. chart-scenarios 
 
 function ChartScenariosDemo({ product }: { product: ProductConfig }) {
   if (product.demo.type !== 'chart-scenarios') return null;
@@ -522,7 +522,7 @@ function ChartScenariosDemo({ product }: { product: ProductConfig }) {
   );
 }
 
-// ── 5. network-map ────────────────────────────────────────────────────────────
+//  5. network-map 
 
 function NetworkMapDemo({ product }: { product: ProductConfig }) {
   if (product.demo.type !== 'network-map') return null;
@@ -560,7 +560,7 @@ function NetworkMapDemo({ product }: { product: ProductConfig }) {
                 style={{ left: `${node.x}%`, top: `${node.y}%` }}>
                 <div className={`w-3 h-3 rounded-full ${nodeColors[node.nodeType]} ${
                   node.status === 'warning' ? 'ring-2 ring-yellow-400' : ''
-                }`} title={`${node.nodeType} — ${node.status}`} />
+                }`} title={`${node.nodeType}  ${node.status}`} />
               </div>
             ))}
           </div>
@@ -645,7 +645,7 @@ function NetworkMapDemo({ product }: { product: ProductConfig }) {
   );
 }
 
-// ── 6. alerts-map ─────────────────────────────────────────────────────────────
+//  6. alerts-map 
 
 function AlertsMapDemo({ product }: { product: ProductConfig }) {
   if (product.demo.type !== 'alerts-map') return null;
@@ -764,7 +764,7 @@ function AlertsMapDemo({ product }: { product: ProductConfig }) {
   );
 }
 
-// ─── Dispatcher ───────────────────────────────────────────────────────────────
+//  Dispatcher 
 
 function DemoPanel({ product }: { product: ProductConfig }) {
   switch (product.demo.type) {
@@ -778,9 +778,9 @@ function DemoPanel({ product }: { product: ProductConfig }) {
   }
 }
 
-// ═══════════════════════════════════════════════════════════════════════════════
+// 
 // Main export
-// ═══════════════════════════════════════════════════════════════════════════════
+// 
 
 interface Props {
   product: ProductConfig;
