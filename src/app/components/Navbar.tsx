@@ -27,7 +27,7 @@ export function Navbar({ activeSection }: { activeSection: string }) {
           <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
             <Sparkles className="w-5 h-5 text-white" />
           </div>
-          <span className="text-xl font-bold text-foreground">AI Platform</span>
+          <span className="text-xl font-bold text-foreground">Trinamix <span className="text-blue-500">AI</span></span>
         </div>
 
         {/* Nav links */}
