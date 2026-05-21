@@ -391,33 +391,31 @@ function ProductModal({
 
           {/* ---- LINKS ---- */}
           {tab === 'links' && (
-            <div className="space-y-3">
-              <p className="text-white/40 text-sm">Toggle which links appear on the product card.</p>
-              {(Object.entries(LINK_LABELS) as [LinkKey, string][]).map(([key, label]) => {
-                const active = !!(form.links ?? {})[key];
+            <div className="space-y-5">
+              <p className="text-white/40 text-sm">
+                Enter URLs for each link. Leave blank to hide that link on the product card.
+              </p>
+              {([
+                { key: 'learnMore'    as LinkKey, label: 'Learn More URL',     icon: 'ExternalLink', placeholder: 'https://trinamix.com/product'        },
+                { key: 'requestDemo'  as LinkKey, label: 'Request Demo URL',   icon: 'Calendar',     placeholder: 'https://calendly.com/trinamix/demo'  },
+                { key: 'documentation' as LinkKey, label: 'Documentation URL', icon: 'BookOpen',     placeholder: 'https://docs.trinamix.com/product'   },
+              ]).map(({ key, label, placeholder }) => {
+                const val = (form.links ?? {})[key] ?? '';
                 return (
-                  <div
-                    key={key}
-                    className={`flex items-center justify-between p-4 rounded-xl border transition-colors ${
-                      active
-                        ? 'bg-emerald-500/8 border-emerald-500/20'
-                        : 'bg-white/3 border-white/8'
-                    }`}
-                  >
-                    <div>
-                      <p className={`text-sm font-medium ${active ? 'text-white' : 'text-white/50'}`}>{label}</p>
-                      <p className="text-xs text-white/30 mt-0.5">{active ? 'Visible on product card' : 'Hidden'}</p>
-                    </div>
-                    <button
-                      onClick={() => toggleLink(key)}
-                      className={`w-12 h-6 rounded-full relative transition-colors ${
-                        active ? 'bg-emerald-500' : 'bg-white/10'
-                      }`}
-                    >
-                      <span className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-all ${
-                        active ? 'left-6' : 'left-0.5'
-                      }`} />
-                    </button>
+                  <div key={key}>
+                    <label className="block text-sm font-medium text-white/70 mb-2">{label}</label>
+                    <input
+                      type="url"
+                      value={val === '#' ? '' : val}
+                      onChange={(e) => {
+                        const url = e.target.value.trim();
+                        const updated = { ...(form.links ?? {}) };
+                        if (url) { updated[key] = url; } else { delete updated[key]; }
+                        set('links', updated);
+                      }}
+                      placeholder={placeholder}
+                      className="w-full bg-[#1a1b23] border border-white/10 rounded-xl px-4 py-3 text-sm text-white outline-none focus:border-blue-500/50 transition-colors placeholder:text-white/20"
+                    />
                   </div>
                 );
               })}
